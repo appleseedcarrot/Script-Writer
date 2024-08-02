@@ -1,16 +1,26 @@
 CXX = g++
-CXXFLAGS = -Wall -Wextra -std=c++11 -pedantic -ggdb $(shell pkg-config --cflags sdl2 freetype2)
-LIBS = $(shell pkg-config --libs sdl2 freetype2)
+CC = gcc
+CXXFLAGS = -Wall -Wextra -std=c++11 -pedantic -ggdb -Iinclude $(shell pkg-config --cflags sdl2 freetype2) 
+CFLAGS = -Iinclude
+LIBS = $(shell pkg-config --libs sdl2 freetype2) -ldl
 
-all: output
-output: src/main.o src/application.o
-	$(CXX) src/main.o src/application.o -o output $(LIBS)
+TARGET = output
+OBJECTS = src/main.o src/glad.o
 
-main.o: src/main.cpp src/application.h
-	$(CXX) -c src/main.cpp $(CXXFLAGS)
+build: $(TARGET)
 
-application.o: src/application.cpp src/application.h
-	$(CXX) -c src/application.cpp $(CXXFLAGS)
+$(TARGET): src/main.o src/glad.o
+	$(CXX) $^ -o $@ $(LIBS)
 
+#src/%.o: %.c
+#	$(CXX) $(CXXFLAGS) -c $<
+
+#glad.o: src/glad.c
+#	$(CC) $(CXXFLAGS) -Iinclude -c $<
+
+.PHONY: clean
 clean:
 	rm -f src/*.o output
+
+run:
+	./output
