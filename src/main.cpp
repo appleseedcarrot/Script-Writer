@@ -27,56 +27,79 @@ struct Char {
 
 int main() {
 
+    std::cout << "******************* Configuring Application *********************" << std::endl;
+
     //****************************************** Initialize SDL ******************************************//
     //****************************************************************************************************//
-    if (SDL_Init(SDL_INIT_VIDEO < 0)) {
-        std::cout << "SDL ERROR: SDL could not be initialized. SDL error " << SDL_GetError() << std::endl;
+    std::cout << "Initializing SDL...   ";
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        std::cout << "SDL ERROR: SDL could not be initialized. " << SDL_GetError() << ". Quitting Application..." << std::endl;
         return -1;
     }
-    std::cout << "SDL Initialized\n";
+    std::cout << "Success!" << std::endl;
 
     // Load OpenGL
-    SDL_GL_LoadLibrary(NULL);
-    // Request an OpenGL 4.5 context (should be core)
-    SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-    std::cout << "OpenGL Loaded by SDL\n";
+    std::cout << "Loading GL Library...   ";
+    if (SDL_GL_LoadLibrary(NULL)) {
+        std::cout << "SDL ERROR: OpenGL could not be loaded. " << SDL_GetError() << ". Quitting Application..." << std::endl;
+        SDL_Quit();
+        return -1;
+    }
+    std::cout << "Success!" << std::endl;
 
     // Create Window
+    std::cout << "Creating SDL Window...   ";
     SDL_Window* window = SDL_CreateWindow("Text Editor", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 0, 0, SDL_WINDOW_RESIZABLE | SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_OPENGL);
     if (window == NULL) {
-        std::cout << "SDL ERROR: Window could not be created. SDL error " << SDL_GetError() << std::endl;
+        std::cout << "SDL ERROR: Window could not be created. " << SDL_GetError() << ". Quitting Application..." << std::endl;
         SDL_Quit();
         return -1;
     }
-    std::cout << "SDL Window Created\n";
+    std::cout << "Success!" << std::endl;
+
+    std::cout << "Requestion OpenGL Version 4.1..." << std::endl;
+    // Request an OpenGL 4.1 context
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
     // Create OpenGL Context
+    std::cout << "Creating OpenGL Context with SDL...   ";
     SDL_GLContext glContext = SDL_GL_CreateContext(window);
-    std::cout << "GL Context Created\n";
+    if (glContext == NULL) {
+        std::cout << "SDL ERROR: OpenGL Context could not be created. " << SDL_GetError() << ". Quitting Application..." << std::endl;
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+    }
+    std::cout << "Success!" << std::endl;
 
     // Initialize Renderer
+    std::cout << "Creating SDL Renderer...   ";
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     if (renderer == NULL) {
-        std::cout << "SDL ERROR: Renderer could not be created. SDL error " << SDL_GetError() << std::endl;
+        std::cout << "SDL ERROR: Renderer could not be created. " << SDL_GetError() << ". Quitting Application..." << std::endl;
         SDL_DestroyWindow(window);
         SDL_Quit();
         return -1;
     }
-    std::cout << "SDL Renderer Created\n";
+    std::cout << "Success!" << std::endl;
 
     // Check OpenGL properties
+    std::cout << "Loading GL Functions...   ";
     if (!gladLoadGLLoader(SDL_GL_GetProcAddress)) {
-        std::cout << "GLAD ERROR: Could not load OpenGL Function Pointers. SDL Error " << SDL_GetError() << "\n";
+        std::cout << "GLAD ERROR: Could not load OpenGL Function Pointers. " << SDL_GetError() << ". Quitting Application..." << std::endl;
         SDL_DestroyWindow(window);
         SDL_Quit();
         return -1;
     }
-    std::cout << "OpenGL loaded\n";
-    //std::cout << "Vendor: " << glGetString(GL_VENDOR) << "\n";
-    //std::cout << "Renderer: " << glGetString(GL_RENDERER) << "\n";
-    //std::cout << "Version: " << glGetString(GL_VERSION) << "\n";
+    std::cout << "Success!" << std::endl;
+
+    // Check OpenGL Configuration
+    std::cout << "******************* Current Configuration *********************" << std::endl;
+    std::cout << "Vendor: " << glGetString(GL_VENDOR) << "\n";
+    std::cout << "Renderer: " << glGetString(GL_RENDERER) << "\n";
+    std::cout << "Version: " << glGetString(GL_VERSION) << "\n";
+    std::cout << "******************* Finish Initialization *********************" << std::endl;
 
     //****************************************** Load TrueType Font ***************************************//
     //*****************************************************************************************************//
