@@ -18,7 +18,7 @@ The following sections are dedicated to marking progress and key moments that he
 
 - Force OpenGL Core Version to work on MacOS
 - M1 Macbook incorrectly loaded OpenGL 2.1 instead of the requested 4.1 -> Fixed by using Core Profile and Requesting 4.1 after SDL was initialized
-- 
+
 ### August 1, 2024
 
 - Added Freetype2 as a dependency

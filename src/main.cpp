@@ -3,189 +3,287 @@
 
 // SDL Library and OpenGL
 #include "SDL.h"
+#include "GLFW/glfw3.h"
 
 // For TTF Font Loading
 #include "ft2build.h"
 #include FT_FREETYPE_H
 
 // OpenGL Mathematics Library
-#include <glm/vec2.hpp>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+// Header Files
+#include "Shader.h"
+#include "Text.h"
 
 // Standard Libraries
 #include <iostream>
 #include <map>
 #include <utility>
+#include <string>
 
-    //****************************************** Structs *************************************************//
-    //****************************************************************************************************//
-struct Char {
-    unsigned int textureID;
-    glm::ivec2 size;
-    glm::ivec2 bearing;
-    FT_Pos advance;
+// glfw: whenever the window size changed (by OS or user resize) this callback function executes
+// ---------------------------------------------------------------------------------------------
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    // make sure the viewport matches the new window dimensions; note that width and 
+    // height will be significantly larger than specified on retina displays.
+    glViewport(0, 0, width, height);
+}
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+        glfwSetWindowShouldClose(window, GLFW_TRUE); // Close the window if ESC is pressed
+    }
+    else {
+        std::cout << char(key) << std::endl;
+    }
+}
+
+// settings
+const unsigned int SCR_WIDTH = 1920;
+const unsigned int SCR_HEIGHT = 1080;
+
+// Holds all state information relevant to a character as loaded using FreeType
+struct Character {
+    unsigned int TextureID; // ID handle of the glyph texture
+    glm::ivec2   Size;      // Size of glyph
+    glm::ivec2   Bearing;   // Offset from baseline to left/top of glyph
+    unsigned int Advance;   // Horizontal offset to advance to next glyph
 };
+
+std::map<GLchar, Character> Characters;
+unsigned int VAO, VBO;
+
+// render line of text
+// -------------------
+void RenderText(Shader &shader, std::string text, float x, float y, float scale, glm::vec3 color)
+{
+    // activate corresponding render state	
+    shader.use();
+    glUniform3f(glGetUniformLocation(shader.getProgramID(), "textColor"), color.x, color.y, color.z);
+    glActiveTexture(GL_TEXTURE0);
+    glBindVertexArray(VAO);
+
+    // iterate through all characters
+    std::string::const_iterator c;
+    for (c = text.begin(); c != text.end(); c++) 
+    {
+        Character ch = Characters[*c];
+
+        float xpos = x + ch.Bearing.x * scale;
+        float ypos = y - (ch.Size.y - ch.Bearing.y) * scale;
+
+        float w = ch.Size.x * scale;
+        float h = ch.Size.y * scale;
+        // update VBO for each character
+        float vertices[6][4] = {
+            { xpos,     ypos + h,   0.0f, 0.0f },            
+            { xpos,     ypos,       0.0f, 1.0f },
+            { xpos + w, ypos,       1.0f, 1.0f },
+
+            { xpos,     ypos + h,   0.0f, 0.0f },
+            { xpos + w, ypos,       1.0f, 1.0f },
+            { xpos + w, ypos + h,   1.0f, 0.0f }           
+        };
+        // render glyph texture over quad
+        glBindTexture(GL_TEXTURE_2D, ch.TextureID);
+        // update content of VBO memory
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices); // be sure to use glBufferSubData and not glBufferData
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        // render quad
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        // now advance cursors for next glyph (note that advance is number of 1/64 pixels)
+        x += (ch.Advance >> 6) * scale; // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
+    }
+    glBindVertexArray(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
 
 int main() {
 
     std::cout << "******************* Configuring Application *********************" << std::endl;
 
-    //****************************************** Initialize SDL ******************************************//
-    //****************************************************************************************************//
-    std::cout << "Initializing SDL...   ";
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        std::cout << "SDL ERROR: SDL could not be initialized. " << SDL_GetError() << ". Quitting Application..." << std::endl;
-        return -1;
-    }
-    std::cout << "Success!" << std::endl;
+//****************************************** Initialize SDL ******************************************//
+//****************************************************************************************************//
+    
+    // glfw: initialize and configure
+    // ------------------------------
+    glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    // Load OpenGL
-    std::cout << "Loading GL Library...   ";
-    if (SDL_GL_LoadLibrary(NULL)) {
-        std::cout << "SDL ERROR: OpenGL could not be loaded. " << SDL_GetError() << ". Quitting Application..." << std::endl;
-        SDL_Quit();
-        return -1;
-    }
-    std::cout << "Success!" << std::endl;
-
-    // Create Window
-    std::cout << "Creating SDL Window...   ";
-    SDL_Window* window = SDL_CreateWindow("Text Editor", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 0, 0, SDL_WINDOW_RESIZABLE | SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_OPENGL);
-    if (window == NULL) {
-        std::cout << "SDL ERROR: Window could not be created. " << SDL_GetError() << ". Quitting Application..." << std::endl;
-        SDL_Quit();
-        return -1;
-    }
-    std::cout << "Success!" << std::endl;
-
-    std::cout << "Requestion OpenGL Version 4.1..." << std::endl;
-    // Request an OpenGL 4.1 context
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-    // Create OpenGL Context
-    std::cout << "Creating OpenGL Context with SDL...   ";
-    SDL_GLContext glContext = SDL_GL_CreateContext(window);
-    if (glContext == NULL) {
-        std::cout << "SDL ERROR: OpenGL Context could not be created. " << SDL_GetError() << ". Quitting Application..." << std::endl;
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-    }
-    std::cout << "Success!" << std::endl;
-
-    // Initialize Renderer
-    std::cout << "Creating SDL Renderer...   ";
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    if (renderer == NULL) {
-        std::cout << "SDL ERROR: Renderer could not be created. " << SDL_GetError() << ". Quitting Application..." << std::endl;
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return -1;
-    }
-    std::cout << "Success!" << std::endl;
-
-    // Check OpenGL properties
-    std::cout << "Loading GL Functions...   ";
-    if (!gladLoadGLLoader(SDL_GL_GetProcAddress)) {
-        std::cout << "GLAD ERROR: Could not load OpenGL Function Pointers. " << SDL_GetError() << ". Quitting Application..." << std::endl;
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return -1;
-    }
-    std::cout << "Success!" << std::endl;
-
-    // Check OpenGL Configuration
-    std::cout << "******************* Current Configuration *********************" << std::endl;
-    std::cout << "Vendor: " << glGetString(GL_VENDOR) << "\n";
-    std::cout << "Renderer: " << glGetString(GL_RENDERER) << "\n";
-    std::cout << "Version: " << glGetString(GL_VERSION) << "\n";
-    std::cout << "******************* Finish Initialization *********************" << std::endl;
-
-    //****************************************** Load TrueType Font ***************************************//
-    //*****************************************************************************************************//
-
-    // Initialize FreeType Library
-    FT_Library library;
-    FT_Face face;
-
-    if (FT_Init_FreeType(&library))
+    // glfw window creation
+    // --------------------
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    if (window == NULL)
     {
-        std::cout << "FREETYPE ERROR: FreeType could not be initialized. Closing Program..." << std::endl;
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
+        std::cout << "Failed to create GLFW window" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
+    glfwMakeContextCurrent(window);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetKeyCallback(window, key_callback);
+
+    // glad: load all OpenGL function pointers
+    // ---------------------------------------
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+    {
+        std::cout << "Failed to initialize GLAD" << std::endl;
+        return -1;
+    }
+    
+    // OpenGL state
+    // ------------
+    glEnable(GL_CULL_FACE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    std::string vertShader = 
+        "#version 410 core\n"
+        "layout (location = 0) in vec4 vertex;\n"
+        "out vec2 TexCoords;\n"
+        "\n"
+        "uniform mat4 projection;"
+        "\n"
+        "void main()\n"
+        "{\n"
+        "   gl_Position = projection * vec4(vertex.xy, 0.0, 1.0);\n"
+        "   TexCoords = vertex.zw;"
+        "}\n";
+
+    std::string fragShader = 
+        "#version 410 core\n"
+        "in vec2 TexCoords;\n"
+        "out vec4 color;"
+        "\n"
+        "uniform sampler2D text;"
+        "uniform vec3 textColor;"
+        "\n"
+        "void main()\n"
+        "{\n"
+        "   vec4 sampled = vec4(1.0, 1.0, 1.0, texture(text, TexCoords).r);"
+        "   color = vec4(textColor, 1.0) * sampled;\n"
+        "}\n";
+
+    Shader shader = Shader(vertShader, fragShader);
+    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT));
+    shader.use();
+    glUniformMatrix4fv(glGetUniformLocation(shader.getProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+
+    // FreeType
+    // --------
+    FT_Library ft;
+    // All functions return a value different than 0 whenever an error occurred
+    if (FT_Init_FreeType(&ft))
+    {
+        std::cout << "ERROR::FREETYPE: Could not init FreeType Library" << std::endl;
         return -1;
     }
 
-    // Load Font into Face
-    FT_New_Face(library,"assets/fonts/cour.ttf",0,&face);
-    if (FT_New_Face(library,"assets/fonts/cour.ttf",0,&face)) {
-        std::cout << "FREETYPE ERROR: Invalid format or Failure to Load Font. Closing Program..." << std::endl;
-        FT_Done_FreeType(library);
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return -1;
-    }
+	// find path to font
+    std::string font_name = "assets/fonts/cour.ttf";
+    Text courier = Text(font_name);
 
-    // Set Pixel Font Size
-    FT_Set_Pixel_Sizes(face, 0, 40);
+	// // load font as face
+    // FT_Face face;
+    // if (FT_New_Face(ft, font_name.c_str(), 0, &face)) {
+    //     std::cout << "ERROR::FREETYPE: Failed to load font" << std::endl;
+    //     return -1;
+    // }
+    // else {
+    //     // set size to load glyphs as
+    //     FT_Set_Pixel_Sizes(face, 0, 48);
 
-    // Initialize Font Texture Map
-    std::map<char, Char> charMap;
+    //     // disable byte-alignment restriction
+    //     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-    // Load each character onto charMap
-    for (unsigned char c = 0; c < 128; c++) {
-
-        // Load Character onto Face
-        if (FT_Load_Char(face, c, FT_LOAD_RENDER))
-        {
-            std::cout << "FREETYPE ERROR: Failed to load Glyph. Closing Program..." << std::endl;  
-            continue;
-        }
-
-        // generate texture
-        unsigned int texture;
-        glGenTextures(1, &texture);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_RED,
-            face->glyph->bitmap.width,
-            face->glyph->bitmap.rows,
-            0,
-            GL_RED,
-            GL_UNSIGNED_BYTE,
-            face->glyph->bitmap.buffer
-        );
-        // set texture options
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        // now store character for later use
-        Char character = {
-            texture, 
-            glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
-            glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
-            face->glyph->advance.x
-        };
-        charMap.insert(std::pair<char, Char>(c, character));
-
-    }
-
-    // Free Freetype Resources
+    //     // load first 128 characters of ASCII set
+    //     for (unsigned char c = 34; c < 128; c++)
+    //     {
+    //         // Load character glyph 
+    //         if (FT_Load_Char(face, c, FT_LOAD_RENDER))
+    //         {
+    //             std::cout << "ERROR::FREETYTPE: Failed to load Glyph" << std::endl;
+    //             continue;
+    //         }
+    //         // generate texture
+    //         unsigned int texture;
+    //         glGenTextures(1, &texture);
+    //         std::cout << c << " " << texture << std::endl;
+    //         glBindTexture(GL_TEXTURE_2D, texture);
+    //         glTexImage2D(
+    //             GL_TEXTURE_2D,
+    //             0,
+    //             GL_RED,
+    //             face->glyph->bitmap.width,
+    //             face->glyph->bitmap.rows,
+    //             0,
+    //             GL_RED,
+    //             GL_UNSIGNED_BYTE,
+    //             face->glyph->bitmap.buffer
+    //         );
+    //         // set texture options
+    //         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    //         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    //         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    //         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //         // now store character for later use
+    //         Character character = {
+    //             texture,
+    //             glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
+    //             glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
+    //             static_cast<unsigned int>(face->glyph->advance.x)
+    //         };
+    //         Characters.insert(std::pair<char, Character>(c, character));
+    //     }
+    //     glBindTexture(GL_TEXTURE_2D, 0);
+    // }
+    // destroy FreeType once we're finished
     FT_Done_Face(face);
-    FT_Done_FreeType(library);
+    FT_Done_FreeType(ft);
 
-    // Quit SDL
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+    // configure VAO/VBO for texture quads
+    // -----------------------------------
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
 
-    // End Program
+    double cursor_x = 25.0;
+    double cursor_y = 1000.0;
+
+    // render loop
+    // -----------
+    while (!glfwWindowShouldClose(window))
+    {
+        // render
+        // ------
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        
+
+        // RenderText(shader, "Poopy Pooop}", cursor_x, cursor_y, 0.5f, glm::vec3(0.0, 0.0f, 0.0f));
+       
+        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
+        // -------------------------------------------------------------------------------
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+
+    glfwTerminate();
     return 0;
 }
+

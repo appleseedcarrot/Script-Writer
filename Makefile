@@ -1,23 +1,17 @@
 CXX = g++
 CC = gcc
-CXXFLAGS = -Wall -Wextra -std=c++11 -pedantic -ggdb -Iinclude $(shell pkg-config --cflags sdl2 freetype2) 
+CXXFLAGS = -Wall -Wextra -std=c++11 -pedantic -ggdb -Iinclude $(shell pkg-config --cflags glfw3 sdl2 freetype2) 
 CFLAGS = -Iinclude
-LIBS = $(shell pkg-config --libs sdl2 freetype2) -ldl
+LIBS = $(shell pkg-config --libs glfw3 sdl2 freetype2)
 
 TARGET = output
-OBJECTS = src/main.o src/glad.o
+OBJECTS = src/main.o src/glad.o src/Shader.o src/Character.o src/Text.o 
 
 build: $(TARGET)
 
-$(TARGET): src/main.o src/glad.o
+$(TARGET): $(OBJECTS)
 	$(CXX) $^ -o $@ $(LIBS)
-
-#src/%.o: %.c
-#	$(CXX) $(CXXFLAGS) -c $<
-
-#glad.o: src/glad.c
-#	$(CC) $(CXXFLAGS) -Iinclude -c $<
-
+	
 .PHONY: clean
 clean:
 	rm -f src/*.o output
