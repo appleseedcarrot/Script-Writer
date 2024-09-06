@@ -45,9 +45,8 @@ Text::Text(std::string& fontFile) {
             // generate texture
             unsigned int texture;
             glGenTextures(1, &texture);
-            std::cout << glGetError() << std::endl;
-            std::cout << c << " " << &texture << std::endl;
             glBindTexture(GL_TEXTURE_2D, texture);
+            std::cout << c << " " << texture << std::endl;
             glTexImage2D(
                 GL_TEXTURE_2D,
                 0,
@@ -65,19 +64,23 @@ Text::Text(std::string& fontFile) {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             // now store character for later use
-            Character character = {
+
+            Character character = Character(
                 texture,
                 glm::ivec2(face->glyph->bitmap.width, face->glyph->bitmap.rows),
                 glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
                 static_cast<unsigned int>(face->glyph->advance.x)
-            };
-            charTextures.insert(std::pair<char, Character>(c, character));
+            );
+
+            charTextures.emplace(c, std::move(character));
         }
         glBindTexture(GL_TEXTURE_2D, 0);
     }
     // destroy FreeType once we're finished
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
+
+    std::cout << "Character Textures Loaded" << std::endl;
 }
 
 // Text::~Text() {

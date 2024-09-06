@@ -1,5 +1,6 @@
 // Header File
 #include "Character.h"
+#include <iostream>
 
 #include <glad/glad.h>
 
@@ -11,7 +12,8 @@ Character::Character(unsigned int textureID, glm::ivec2 size, glm::ivec2 bearing
 }
 
 Character::~Character() {
-    glDeleteTextures(1, &textureID);
+//     glDeleteTextures(1, &this->textureID);
+//     std::cout << "Texture Deleted" << std::endl;
 }
 
 unsigned int Character::getTextureID() {
