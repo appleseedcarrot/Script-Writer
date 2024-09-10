@@ -15,13 +15,22 @@
 class Text {
 
     private:
+        // Constructor Functions
+        void initFont(std::string& fontFile);
+
+        // Attributes
         std::map<char,Character> charTextures;
+        std::string text;
+        Shader shader;
+
+        unsigned int VAO, VBO;
 
     public:
         Text(std::string& fontFile);
-        // ~Text();
 
-        // void renderChar(Shader& s, char c, float x, float y, glm::ivec3 color);
+        void renderText(float x, float y, float scale, glm::ivec3 color);
         Character* getChar(char c);
+        void addChar(char c);
+        void delChar();
 
 };

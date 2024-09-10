@@ -10,7 +10,6 @@
 class Character {
     private:
         unsigned int textureID;
-        char c;
         glm::ivec2 size;
         glm::ivec2 bearing;
         FT_Pos advance;
