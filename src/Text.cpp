@@ -43,8 +43,8 @@ std::string fragShader =
 "   color = vec4(textColor, 1.0) * sampled;\n"
 "}\n";
 
-Text::Text(std::string& fontFile) : text(""), shader(vertShader, fragShader) { 
-
+Text::Text(const std::string& fontFile) : text(""), shader(vertShader, fragShader) { 
+    
     // Convert TTF file into usable textures
     initFont(fontFile);
     
@@ -69,10 +69,10 @@ Text::Text(std::string& fontFile) : text(""), shader(vertShader, fragShader) {
     glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(1920), 0.0f, static_cast<float>(1080));
     shader.use();
     glUniformMatrix4fv(glGetUniformLocation(shader.getProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-    
+
 }
 
-void Text::initFont(std::string& fontFile) {
+void Text::initFont(const std::string& fontFile) {
 
     FT_Library ft;
     // All functions return a value different than 0 whenever an error occurred
