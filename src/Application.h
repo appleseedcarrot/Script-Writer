@@ -16,29 +16,20 @@ class Application {
         ~Application();
 
     private:
-        int windowWidth;
-        int windowHeight;
         GLFWwindow* window;
-
-        //
-        // init()
-        //
-        // This function handles initialization of GLFW and OpenGL for the constructor
+        
+        // Handle initialization of GLFW and OpenGL for the constructor
         //
         void init();
-        //
-        // newWindow()
-        //
-        // This function creates a new GLFW window with the inputted window mode in use for the constructor
+        // Creates a new maximized GLFW window for the constructor
         //
         void newWindow();
-
+        // Manages key press events for GLFW and updates the application accordingly
         //
-        // keyPress()
+        static void keyPress(GLFWwindow* window, int key, int scancode, int action, int mods);
+        // Manages resizing of openGL viewport to match window resizing
         //
-        // This function manages key press events for GLFW and updates the application accordingly
-        //
-        void keyPress(GLFWwindow* window, int key, int scancode, int action, int mods);
+        static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 
     public:
         //
@@ -48,7 +39,5 @@ class Application {
         // until the application is closed
         //
         void run();
-
-    private:
         Text* text;
 };

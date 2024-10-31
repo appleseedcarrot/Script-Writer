@@ -48,7 +48,6 @@ Text::Text(const std::string& fontFile) : text(""), shader(vertShader, fragShade
     // Convert TTF file into usable textures
     initFont(fontFile);
     
-
     // Create Buffers
     glGenBuffers(1, &VBO);
     glGenVertexArrays(1, &VAO);
@@ -56,7 +55,6 @@ Text::Text(const std::string& fontFile) : text(""), shader(vertShader, fragShade
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBindVertexArray(VAO);
     
-
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(float) * 4, 0);
@@ -64,12 +62,10 @@ Text::Text(const std::string& fontFile) : text(""), shader(vertShader, fragShade
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
     
-
     // Configure shader properties
     glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(1920), 0.0f, static_cast<float>(1080));
     shader.use();
     glUniformMatrix4fv(glGetUniformLocation(shader.getProgramID(), "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-
 }
 
 void Text::initFont(const std::string& fontFile) {
@@ -138,6 +134,8 @@ void Text::initFont(const std::string& fontFile) {
     // destroy FreeType once we're finished
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
+    // Set text width to 0
+    textWidth = 0;
 }
 
 Character* Text::getChar(char c) {
@@ -146,18 +144,33 @@ Character* Text::getChar(char c) {
 }
 
 void Text::addChar(char c) {
+    // Add to string
     this->text.push_back(c);
+    // Get instance of Character
+    Character* ch = getChar(c);
+    // Add current width of text by character's advance.
+    textWidth += (ch->getAdvance() >> 6) * 1;
 }
 
 void Text::delChar() {
     if (this->text.size() == 0) {
         return;
     }
-    else 
-        this->text.pop_back();
+    // Subtract current width by character's advance.
+    Character* ch = getChar(text.back());
+    textWidth -= (ch->getAdvance() >> 6) * 1;
+    // Remove character
+    text.pop_back();
 }
 
-void Text::renderText(float x, float y, float scale, glm::ivec3 color) {
+float Text::getTextWidth() {
+    return this->textWidth;
+}
+
+void Text::renderText(float x, float y, float scale, glm::ivec3 color, const std::string& TextToRender = "") {
+    // If no string was inputted, use stored text
+    std::string TextToDisplay = TextToRender.empty() ? this->text : TextToRender;
+
     // Activate the Shader
     this->shader.use();
 
@@ -169,10 +182,9 @@ void Text::renderText(float x, float y, float scale, glm::ivec3 color) {
     glBindVertexArray(VAO);
 
     // iterate through all characters
-    std::string::const_iterator c;
-    for (c = this->text.begin(); c != this->text.end(); c++) 
+    for (char c : TextToDisplay) 
     {
-        Character* ch = this->getChar(*c);
+        Character* ch = this->getChar(c);
         
         float xpos = x + ch->getBearingX() * scale;
         float ypos = y - (ch->getHeight() - ch->getBearingY()) * scale;

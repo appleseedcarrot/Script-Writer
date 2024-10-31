@@ -21,6 +21,7 @@ class Text {
         // Attributes
         std::map<char,Character> charTextures;
         std::string text;
+        float textWidth;
         Shader shader;
 
         unsigned int VAO, VBO;
@@ -28,9 +29,10 @@ class Text {
     public:
         Text(const std::string& fontFile);
 
-        void renderText(float x, float y, float scale, glm::ivec3 color);
+        void renderText(float x, float y, float scale, glm::ivec3 color, const std::string& TextToRender);
         Character* getChar(char c);
         void addChar(char c);
         void delChar();
+        float getTextWidth();
 
 };
