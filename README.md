@@ -1,18 +1,24 @@
 # Script-Writer
 
-Script Writer is a lightweight screenwriting application that you can use to write film scripts and plays. It is being developed by Christian Lee as an introduction to OpenGL developement and low-level graphics rendering.
+Script Writer is a lightweight screenwriting application that you can use to write and edit text files. This is an introduction for me to OpenGL developement and low-level graphics rendering.
 
 # Dependencies
 
 Script Writer requires these following libraries and packages
 
-- SDL2
+- GLFW
 - Freetype2
 - pkg-config
 
 # Revisions
 
 The following sections are dedicated to marking progress and key moments that helped me learn OpenGL.
+
+### July 15, 2025
+
+- Move shaders to their own files instead of as string constants. Shaders will read from the file streams instead.
+- Moved from SDL2 to GLFW for ease of development.
+- Use CharModCallback to parse text inputs, use KeyCallbacks for anything not text-related
 
 ### August 2, 2024
 
