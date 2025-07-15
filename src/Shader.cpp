@@ -3,9 +3,14 @@
 
 // Standard Libraries
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
 // Header File
 #include "Shader.h"
+
+static unsigned int createShader(unsigned int type, const std::string& source);
+static std::string ReadTextFile(const std::string& fileName);
 
 // Function Definitions
 Shader::Shader(const std::string& vertexShader, const std::string& fragmentShader) {
@@ -13,9 +18,12 @@ Shader::Shader(const std::string& vertexShader, const std::string& fragmentShade
     // Create Shader program
     unsigned int program = glCreateProgram();
 
+    std::string vertBuf = ReadTextFile(vertexShader);
+    std::string fragBuf = ReadTextFile(fragmentShader);
+
     // Creates OpenGL vertex and fragment shaders
-    unsigned int vertShader = createShader(GL_VERTEX_SHADER, vertexShader);
-    unsigned int fragShader = createShader(GL_FRAGMENT_SHADER, fragmentShader);
+    unsigned int vertShader = createShader(GL_VERTEX_SHADER, vertBuf);
+    unsigned int fragShader = createShader(GL_FRAGMENT_SHADER, fragBuf);
 
     // Compile vertex and fragment shaders into final shader program
     glAttachShader(program, vertShader);
@@ -47,7 +55,21 @@ Shader::~Shader() {
     glDeleteProgram(shaderProgram);
 }
 
-unsigned int Shader::createShader(unsigned int type, const std::string& source) {
+static std::string ReadTextFile(const std::string& fileName) {
+    std::ifstream file(fileName);
+    if (!file.is_open()) {
+        std::cout << "Could not read Shader file: " << fileName << std::endl;
+        return "";
+    }
+
+    std::stringstream ss{};
+    ss << file.rdbuf();
+    file.close();
+
+    return ss.str();
+}
+
+static unsigned int createShader(unsigned int type, const std::string& source) {
 
     // Create the shader
     unsigned int id = glCreateShader(type);

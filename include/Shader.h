@@ -8,9 +8,6 @@ class Shader {
         // Shader ID
         unsigned int shaderProgram;
 
-        // Functions
-        unsigned int createShader(unsigned int type, const std::string& source);
-
     public:
         // Constructor, Destructor
         Shader(const std::string& vertexShader, const std::string& fragmentShader);
